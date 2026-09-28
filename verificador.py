@@ -124,5 +124,3 @@ def documentos():
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-# Verificado por sistema Key-2026
