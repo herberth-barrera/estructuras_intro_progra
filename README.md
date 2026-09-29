@@ -105,4 +105,4 @@ El estado depende del número de documentos marcados:
 
 ## Autor
 
-Proyecto creado por **Herberth Barrera**.
+Proyecto creado por **Herberth Barrera** y **Hector Calderon**.
