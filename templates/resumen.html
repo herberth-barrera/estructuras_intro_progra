@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block titulo %}Resumen{% endblock %}
+{% block contenido %}
+<h1>Resumen de expedientes</h1>
+<div class="tarjetas">
+  <div class="tarjeta completo"><span class="numero">{{ completos }}</span>Completos</div>
+  <div class="tarjeta proceso"><span class="numero">{{ en_proceso }}</span>Incompletos en proceso</div>
+  <div class="tarjeta vacio"><span class="numero">{{ sin_documentos }}</span>Incompletos sin documentos</div>
+</div>
+<p>Total de empleados: <strong>{{ total }}</strong> · Expedientes incompletos: <strong>{{ incompletos }}</strong></p>
+<table>
+  <tr><th>Código</th><th>Nombre</th><th>Documentos</th><th>Clasificación</th></tr>
+  {% for d in detalle %}
+  <tr class="{{ d.clase }}">
+    <td>{{ d.datos.codigo }}</td>
+    <td>{{ d.datos.nombre }}</td>
+    <td>{{ d.datos.entregados }} de {{ d.datos.total }}</td>
+    <td>{{ d.estado }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

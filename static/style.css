@@ -1,0 +1,33 @@
+body { font-family: Arial, sans-serif; background: #f5f8ff; color: #0a1f44; margin: 0; padding: 24px; }
+nav { margin-bottom: 20px; }
+nav a { margin-right: 18px; color: #006dff; font-weight: bold; text-decoration: none; }
+nav a:hover { text-decoration: underline; }
+h1 { border-bottom: 3px solid #f5b301; padding-bottom: 6px; }
+
+table { border-collapse: collapse; width: 100%; background: #ffffff; }
+th { background: #006dff; color: #ffffff; padding: 10px; text-align: left; }
+td { padding: 10px; border-bottom: 1px solid #e5e9f2; }
+
+label { display: block; margin-top: 12px; }
+input[type="text"], input[type="date"], select { padding: 8px; width: 280px; }
+button, .boton { display: inline-block; margin-top: 16px; padding: 10px 18px; background: #006dff; color: #ffffff; border: 0; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 14px; }
+td button, td .boton { margin-top: 0; padding: 6px 12px; }
+.peligro { background: #c0392b; }
+.secundario { background: #6b7a99; }
+form.inline { display: inline; }
+.error { color: #a00000; font-weight: bold; }
+
+.checklist { list-style: none; padding: 0; max-width: 520px; background: #ffffff; }
+.checklist li { padding: 8px 12px; border-bottom: 1px solid #e5e9f2; display: flex; align-items: center; }
+.checklist label { display: inline; margin: 0 0 0 10px; cursor: pointer; }
+
+/* Colores de las clasificaciones */
+.completo { --color: #2e9e5b; --fondo: #e3f6ea; }
+.proceso  { --color: #d98200; --fondo: #fff1d9; }
+.vacio    { --color: #c0392b; --fondo: #fde6e3; }
+.incompleto { --color: #d98200; --fondo: #fff1d9; }
+.badge { display: inline-block; padding: 4px 12px; border-radius: 14px; color: #ffffff; background: var(--color); font-size: 13px; font-weight: bold; }
+tr.completo td, tr.proceso td, tr.vacio td { background: var(--fondo); color: #0a1f44; }
+.tarjetas { display: flex; gap: 16px; margin: 20px 0; }
+.tarjeta { flex: 1; padding: 18px; border-radius: 10px; background: var(--fondo); border-left: 8px solid var(--color); font-weight: bold; }
+.tarjeta .numero { display: block; font-size: 36px; color: var(--color); }

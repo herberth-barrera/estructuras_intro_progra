@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titulo %}Empleados{% endblock %}
+{% block contenido %}
+<h1>Expedientes del personal</h1>
+<table>
+  <tr><th>Código</th><th>Nombre</th><th>Puesto</th><th>Sucursal</th><th>Documentos</th><th>Estado</th><th>Acciones</th></tr>
+  {% for e in empleados %}
+  <tr>
+    <td>{{ e.datos.codigo }}</td>
+    <td>{{ e.datos.nombre }}</td>
+    <td>{{ e.datos.puesto }}</td>
+    <td>{{ e.datos.sucursal }}</td>
+    <td>{{ e.datos.entregados }} de {{ e.datos.total }}</td>
+    <td><span class="badge {{ e.clase }}">{{ e.estado }}</span></td>
+    <td>
+      <a class="boton" href="/empleados/editar/{{ e.datos.id }}">Modificar</a>
+      <form class="inline" method="POST" action="/empleados/eliminar/{{ e.datos.id }}"
+            onsubmit="return confirm('¿Eliminar a {{ e.datos.nombre }} y todo su expediente?');">
+        <button type="submit" class="peligro">Eliminar</button>
+      </form>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="7">No hay empleados registrados.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}
