@@ -1,108 +1,58 @@
-# Expediente Digital
+# Expedientes Digitales – Hospital de Diagnóstico (Fase 2)
 
-Aplicación web sencilla hecha con **Flask** que muestra un checklist de documentos y calcula automáticamente el estado del perfil según cuántos documentos se han marcado como entregados.
+## Qué hace el sistema
+Administra los expedientes de personal del Hospital de Diagnóstico. Permite registrar empleados, consultar el estado de su expediente, modificar qué documentos del checklist ya entregó y eliminar empleados. Además, una página de resumen recorre todos los expedientes y los clasifica como completos o incompletos.
 
-## Características
-
-- Checklist interactivo con 4 documentos: **DUI**, **Antecedentes**, **Curriculum vitae** y **Licencia médica**.
-- Al marcar o desmarcar una casilla, el formulario se envía solo (`onchange="this.form.submit()"`) y la página se actualiza.
-- Insignia (badge) de color que indica el estado del perfil.
-- Contador de documentos completos (por ejemplo, `2 de 4`).
-- Todo el HTML y CSS se genera desde una sola ruta, sin plantillas externas.
-
-## Requisitos
-
-- Python 3.8 o superior
-- Flask
-
-## Instalación
-
-```bash
-# 1. (Opcional) Crear y activar un entorno virtual
-python -m venv venv
-source venv/bin/activate      # En Windows: venv\Scripts\activate
-
-# 2. Instalar dependencias
-pip install flask
+## Cómo ejecutarlo
 ```
-
-## Ejecución
-
-Guarda el código en un archivo, por ejemplo `app.py`, y ejecútalo:
-
-```bash
+pip install flask
+python crear_bd.py
 python app.py
 ```
+Abrir en el navegador: http://127.0.0.1:5000/empleados
 
-Luego abre en el navegador:
-
+## Estructura de archivos
 ```
-http://127.0.0.1:5000/documentos
-```
-
-> El servidor corre con `debug=True`, por lo que se reinicia solo al guardar cambios. **No uses este modo en producción.**
-
-## Uso
-
-### Ruta disponible
-
-| Método | Ruta          | Descripción                                   |
-|--------|---------------|-----------------------------------------------|
-| GET    | `/documentos` | Muestra el expediente y el estado del perfil. |
-
-### Parámetros de la URL
-
-Cada documento se controla con un parámetro. Un documento se considera **entregado** solo si su valor es exactamente `si`.
-
-| Parámetro      | Documento         |
-|----------------|-------------------|
-| `dui`          | DUI               |
-| `antecedentes` | Antecedentes      |
-| `cv`           | Curriculum vitae  |
-| `licencia`     | Licencia médica   |
-
-### Ejemplos
-
-```
-/documentos                                   → ningún documento marcado
-/documentos?dui=si&cv=si                      → 2 de 4 documentos
-/documentos?dui=si&antecedentes=si&cv=si&licencia=si   → perfil completo
+fase2_equipo/
+|-- app.py              # rutas de Flask y lógica del sistema
+|-- crear_bd.py         # crea las tablas y carga 6 empleados de ejemplo
+|-- README.md
+|-- templates/
+|   |-- base.html       # plantilla común (enlaza static/style.css)
+|   |-- empleados.html  # listado de empleados con su estado
+|   |-- nuevo.html      # formulario de registro
+|   |-- expediente.html # formulario para modificar documentos
+|   |-- resumen.html    # resumen con clasificaciones
+|-- static/
+|   |-- style.css       # hoja de estilos única del sitio
 ```
 
-## Estados del perfil
+## Rutas
+| Ruta | Método | Función |
+|---|---|---|
+| http://127.0.0.1:5000/empleados | GET | Consultar: lista de empleados y estado del expediente |
+| http://127.0.0.1:5000/empleados/nuevo | GET, POST | Registrar: formulario con validación |
+| http://127.0.0.1:5000/empleados/editar/1 | GET, POST | Modificar: marcar/desmarcar documentos entregados |
+| http://127.0.0.1:5000/empleados/eliminar/1 | POST | Eliminar un empleado (pide confirmación en el navegador) |
+| http://127.0.0.1:5000/resumen | GET | Resumen con contadores por clasificación |
 
-El estado depende del número de documentos marcados:
+## Base de datos (SQLite, `hospital.db`)
+- **empleados**: id, codigo (único), nombre, puesto, area, sucursal, fecha_ingreso
+- **documentos**: id, nombre (catálogo de los 13 documentos del checklist)
+- **expediente**: empleado_id, documento_id, entregado (0 = falta, 1 = entregado)
 
-| Documentos completos | Estado             | Color              |
-|----------------------|--------------------|--------------------|
-| 0                    | Perfil incompleto  | Rojo `#e74c3c`     |
-| 1 a 3                | Perfil en proceso  | Naranja `#f39c12`  |
-| 4                    | Perfil completado  | Verde `#2ecc71`    |
+Todas las sentencias SQL usan parámetros `?`.
 
-## Cómo funciona
+## Cómo funciona el resumen
+`/resumen` lee todos los empleados con cuántos documentos entregó cada uno y los recorre con un `for`. En cada vuelta usa `if/elif/else`:
+- **Completo** (verde): entregó todos los documentos.
+- **Incompleto en proceso** (naranja): entregó al menos uno, pero no todos.
+- **Incompleto sin documentos** (rojo): no ha entregado ninguno.
 
-1. **Lectura de parámetros:** con `request.args.get(...)` se leen los cuatro valores y se convierten a booleano (`True` si el valor es `"si"`).
-2. **Listas paralelas:** `nombres_documentos`, `estados_documentos` y `params` mantienen el mismo orden, de modo que el índice `i` corresponde al mismo documento en las tres.
-3. **Generación del checklist:** se recorre `estados_documentos`; por cada documento se construye un `<li>` con su checkbox (marcado si corresponde) y se incrementa el `contador`.
-4. **Evaluación del perfil:** según el valor de `contador` se elige el texto y el color de la insignia.
-5. **Respuesta:** la función devuelve una página HTML completa (con CSS incrustado) usando f-strings. Las llaves del CSS se escapan duplicándolas (`{{ }}`).
+Cada rama suma a un contador y la página muestra cuántos hay de cada tipo, el total de incompletos y el detalle por empleado.
 
-## Estructura del proyecto
-
-```
-.
-├── app.py        # Aplicación Flask (ruta /documentos)
-└── README.md     # Este archivo
-```
-
-## Posibles mejoras
-
-- Mover el HTML a plantillas **Jinja2** (`render_template`) para separar lógica y presentación.
-- Guardar el estado de los documentos en una base de datos en lugar de la URL.
-- Agregar un nombre de usuario dinámico en lugar de un título fijo.
-- Añadir un campo para subir los archivos de cada documento.
-- Desactivar `debug=True` y usar un servidor como Gunicorn en producción.
-
-## Autor
-
-Proyecto creado por **Herberth Barrera** y **Hector Calderon**.
+## Equipo: parte de código desarrollada por cada integrante
+- Nombre 1: (completar) conexión a la base de datos y `crear_bd.py`
+- Nombre 2: (completar) registro con validación
+- Nombre 3: (completar) listado, bucle y decisión del resumen
+- Nombre 4: (completar) formularios, modificar/eliminar y hoja de estilos
