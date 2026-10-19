@@ -7,12 +7,13 @@ DOCUMENTOS = [
     "Curriculum vitae",
     "Solvencia de la Policía Nacional Civil",
     "Antecedentes penales",
-    "2 recomendaciones personales",
     "2 recomendaciones laborales",
-    "Fotocopia de DUI",
+    "2 recomendaciones personales",
     "Fotocopia de NIT",
-    "Fotocopia de ISSS",
+    "Fotocopia de DUI",
     "Fotocopia de AFP",
+    "Fotocopia de ISSS",
+    
 ]
 
 # Informacion de cada empleado

@@ -38,7 +38,7 @@ fase2_equipo/
 
 ## Base de datos (SQLite, `hospital.db`)
 - **empleados**: id, codigo (único), nombre, puesto, area, sucursal, fecha_ingreso
-- **documentos**: id, nombre (catálogo de los 13 documentos del checklist)
+- **documentos**: id, nombre (catálogo de los 12 documentos del checklist)
 - **expediente**: empleado_id, documento_id, entregado (0 = falta, 1 = entregado)
 
 Todas las sentencias SQL usan parámetros `?`.
