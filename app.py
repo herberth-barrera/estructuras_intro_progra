@@ -33,7 +33,7 @@ def inicio():
     return redirect("/empleados")
 
 
-# ---------- CONSULTAR ----------
+# Consultas
 @app.route("/empleados")
 def listar():
     filas = obtener_empleados()
@@ -47,7 +47,7 @@ def listar():
     return render_template("empleados.html", empleados=empleados)
 
 
-# ---------- REGISTRAR ----------
+# Registro
 @app.route("/empleados/nuevo", methods=["GET", "POST"])
 def nuevo():
     error = ""
@@ -89,7 +89,7 @@ def nuevo():
     return render_template("nuevo.html", error=error, datos=datos, sucursales=SUCURSALES)
 
 
-# ---------- MODIFICAR (estado de los documentos del expediente) ----------
+# Modificacion
 @app.route("/empleados/editar/<int:emp_id>", methods=["GET", "POST"])
 def editar(emp_id):
     conexion = conectar()
@@ -122,7 +122,7 @@ def editar(emp_id):
     return render_template("expediente.html", empleado=empleado, docs=docs, error=error)
 
 
-# ---------- ELIMINAR ----------
+# Eliminar
 @app.route("/empleados/eliminar/<int:emp_id>", methods=["POST"])
 def eliminar(emp_id):
     conexion = conectar()
@@ -133,7 +133,7 @@ def eliminar(emp_id):
     return redirect("/empleados")
 
 
-# ---------- RESUMEN (repetición + decisión) ----------
+# Resumen
 @app.route("/resumen")
 def resumen():
     filas = obtener_empleados()
