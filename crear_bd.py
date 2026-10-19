@@ -15,7 +15,7 @@ DOCUMENTOS = [
     "Fotocopia de AFP",
 ]
 
-# (código, nombre, puesto, área, sucursal, fecha de ingreso, cuántos documentos entregó)
+# Informacion de cada empleado
 EMPLEADOS = [
     ("HDD-001", "Camila Herrera", "Médico general", "Consulta externa", "Escalón", "2024-02-12", 13),
     ("HDD-002", "Andres Weil", "Técnico de laboratorio", "Laboratorio", "Santa Elena", "2025-05-20", 9),
