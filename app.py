@@ -1,126 +1,162 @@
-from flask import Flask, request
+import sqlite3
+from datetime import datetime
+from flask import Flask, render_template, request, redirect, abort
 
 app = Flask(__name__)
 
-@app.route("/documentos")
-def documentos():
-    dui = request.args.get("dui") == "si"
-    antecedentes = request.args.get("antecedentes") == "si"
-    cv = request.args.get("cv") == "si"
-    licencia = request.args.get("licencia") == "si"
+SUCURSALES = ["Escalón", "Santa Elena", "Colonia Médica"]
 
-    # Dos listas paralelas: el nombre y su estado, en el mismo orden
-    nombres_documentos = ["DUI", "Antecedentes", "Curriculum vitae", "Licencia médica"]
-    estados_documentos = [dui, antecedentes, cv, licencia]
-    
-    # Nombres de parámetros para la URL (corresponden a las 4 variables)
-    params = ["dui", "antecedentes", "cv", "licencia"]
 
-    contador = 0
-    filas_html = ""
-    for i in range(len(estados_documentos)):
-        if estados_documentos[i]:
-            contador += 1
-            checked_attr = "checked"
+def conectar():
+    conexion = sqlite3.connect("hospital.db")
+    conexion.row_factory = sqlite3.Row
+    conexion.execute("PRAGMA foreign_keys = ON")
+    return conexion
+
+
+def obtener_empleados():
+    """Empleados con cuántos documentos entregó y cuántos le corresponden."""
+    conexion = conectar()
+    filas = conexion.execute("""
+        SELECT e.*, COALESCE(SUM(x.entregado), 0) AS entregados, COUNT(x.documento_id) AS total
+        FROM empleados e
+        LEFT JOIN expediente x ON x.empleado_id = e.id
+        GROUP BY e.id
+        ORDER BY e.id
+    """).fetchall()
+    conexion.close()
+    return filas
+
+
+@app.route("/")
+def inicio():
+    return redirect("/empleados")
+
+
+# Consultar
+@app.route("/empleados")
+def listar():
+    filas = obtener_empleados()
+    empleados = []
+    for fila in filas:
+        if fila["total"] > 0 and fila["entregados"] == fila["total"]:
+            estado, clase = "Completo", "completo"
         else:
-            checked_attr = ""
-            
-        # Generamos el checklist dentro de tu misma variable filas_html
-        filas_html += f"""
-        <li>
-            <input type="checkbox" id="{params[i]}" name="{params[i]}" value="si" {checked_attr} onchange="this.form.submit()">
-            <label for="{params[i]}">{nombres_documentos[i]}</label>
-        </li>
-        """
+            estado, clase = "Incompleto", "incompleto"
+        empleados.append({"datos": fila, "estado": estado, "clase": clase})
+    return render_template("empleados.html", empleados=empleados)
 
-    # Evaluacion de estado del perfil según el contador
-    if contador == 0:
-        estado_perfil = "Perfil incompleto"
-        color_badge = "#e74c3c"  # Rojo
-    elif contador < len(estados_documentos):
-        estado_perfil = "Perfil en proceso"
-        color_badge = "#f39c12"  # Naranja
-    else:
-        estado_perfil = "Perfil completado"
-        color_badge = "#2ecc71"  # Verde
 
-    return f"""
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <title>Expediente Digital</title>
-        <style>
-            body {{
-                font-family: Arial, sans-serif;
-                background-color: #f4f7f6;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                margin: 0;
-            }}
-            .card {{
-                background: white;
-                padding: 30px;
-                border-radius: 10px;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-                width: 350px;
-            }}
-            h2 {{
-                margin-top: 0;
-                color: #2c3e50;
-            }}
-            .badge {{
-                display: inline-block;
-                padding: 6px 12px;
-                color: white;
-                background-color: {color_badge};
-                border-radius: 15px;
-                font-weight: bold;
-                font-size: 14px;
-                margin-bottom: 15px;
-            }}
-            ul {{
-                list-style-type: none;
-                padding-left: 0;
-            }}
-            li {{
-                padding: 10px 0;
-                border-bottom: 1px solid #eee;
-                font-size: 16px;
-                display: flex;
-                align-items: center;
-            }}
-            input[type="checkbox"] {{
-                width: 18px;
-                height: 18px;
-                margin-right: 10px;
-                cursor: pointer;
-            }}
-            label {{
-                cursor: pointer;
-            }}
-            p {{
-                font-weight: bold;
-                color: #555;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="card">
-            <h2>Expediente de doctor Herberth</h2>
-            <div class="badge">{estado_perfil}</div>
-            
-            <form method="GET" action="/documentos">
-                <ul>{filas_html}</ul>
-            </form>
+# Registrar usuarios
+@app.route("/empleados/nuevo", methods=["GET", "POST"])
+def nuevo():
+    error = ""
+    datos = {"codigo": "", "nombre": "", "puesto": "", "area": "", "sucursal": "", "fecha_ingreso": ""}
+    if request.method == "POST":
+        for campo in datos:
+            datos[campo] = request.form.get(campo, "").strip()
 
-            <p>Documentos completos: {contador} de {len(estados_documentos)}</p>
-        </div>
-    </body>
-    </html>
-    """
+        conexion = conectar()
+        repetido = conexion.execute("SELECT id FROM empleados WHERE codigo = ?", (datos["codigo"],)).fetchone()
+
+        fecha_valida = True
+        try:
+            datetime.strptime(datos["fecha_ingreso"], "%Y-%m-%d")
+        except ValueError:
+            fecha_valida = False
+
+        if "" in datos.values():
+            error = "Todos los campos son obligatorios."
+        elif datos["sucursal"] not in SUCURSALES:
+            error = "Selecciona una sucursal válida."
+        elif not fecha_valida:
+            error = "La fecha de ingreso no es válida."
+        elif repetido:
+            error = "Ya existe un empleado con ese código."
+        else:
+            cur = conexion.execute(
+                "INSERT INTO empleados (codigo, nombre, puesto, area, sucursal, fecha_ingreso) VALUES (?, ?, ?, ?, ?, ?)",
+                (datos["codigo"], datos["nombre"], datos["puesto"], datos["area"], datos["sucursal"], datos["fecha_ingreso"]))
+            emp_id = cur.lastrowid
+            for doc in conexion.execute("SELECT id FROM documentos").fetchall():
+                conexion.execute(
+                    "INSERT INTO expediente (empleado_id, documento_id, entregado) VALUES (?, ?, 0)",
+                    (emp_id, doc["id"]))
+            conexion.commit()
+            conexion.close()
+            return redirect("/empleados")
+        conexion.close()
+    return render_template("nuevo.html", error=error, datos=datos, sucursales=SUCURSALES)
+
+
+# Modificar usuario
+@app.route("/empleados/editar/<int:emp_id>", methods=["GET", "POST"])
+def editar(emp_id):
+    conexion = conectar()
+    empleado = conexion.execute("SELECT * FROM empleados WHERE id = ?", (emp_id,)).fetchone()
+    if empleado is None:
+        conexion.close()
+        abort(404)
+    docs = conexion.execute("""
+        SELECT d.id, d.nombre, x.entregado
+        FROM expediente x JOIN documentos d ON d.id = x.documento_id
+        WHERE x.empleado_id = ? ORDER BY d.id
+    """, (emp_id,)).fetchall()
+
+    error = ""
+    if request.method == "POST":
+        validos = {str(d["id"]) for d in docs}
+        marcados = request.form.getlist("doc")
+        if any(m not in validos for m in marcados):
+            error = "Se recibió un documento que no pertenece al expediente."
+        else:
+            conexion.execute("UPDATE expediente SET entregado = 0 WHERE empleado_id = ?", (emp_id,))
+            for m in marcados:
+                conexion.execute(
+                    "UPDATE expediente SET entregado = 1 WHERE empleado_id = ? AND documento_id = ?",
+                    (emp_id, int(m)))
+            conexion.commit()
+            conexion.close()
+            return redirect("/empleados")
+    conexion.close()
+    return render_template("expediente.html", empleado=empleado, docs=docs, error=error)
+
+
+# Eliminar usuario
+@app.route("/empleados/eliminar/<int:emp_id>", methods=["POST"])
+def eliminar(emp_id):
+    conexion = conectar()
+    conexion.execute("DELETE FROM expediente WHERE empleado_id = ?", (emp_id,))
+    conexion.execute("DELETE FROM empleados WHERE id = ?", (emp_id,))
+    conexion.commit()
+    conexion.close()
+    return redirect("/empleados")
+
+
+# Resumen
+@app.route("/resumen")
+def resumen():
+    filas = obtener_empleados()
+    completos = 0
+    en_proceso = 0
+    sin_documentos = 0
+    detalle = []
+    for fila in filas:
+        if fila["total"] > 0 and fila["entregados"] == fila["total"]:
+            completos = completos + 1
+            clase, estado = "completo", "Completo"
+        elif fila["entregados"] > 0:
+            en_proceso = en_proceso + 1
+            clase, estado = "proceso", "Incompleto (en proceso)"
+        else:
+            sin_documentos = sin_documentos + 1
+            clase, estado = "vacio", "Incompleto (sin documentos)"
+        detalle.append({"datos": fila, "estado": estado, "clase": clase})
+    return render_template("resumen.html", detalle=detalle, total=len(filas),
+                           completos=completos, en_proceso=en_proceso,
+                           sin_documentos=sin_documentos,
+                           incompletos=en_proceso + sin_documentos)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
