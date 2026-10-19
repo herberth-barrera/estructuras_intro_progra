@@ -52,7 +52,7 @@ Todas las sentencias SQL usan parámetros `?`.
 Cada rama suma a un contador y la página muestra cuántos hay de cada tipo, el total de incompletos y el detalle por empleado.
 
 ## Equipo: parte de código desarrollada por cada integrante
-- Nombre 1: (completar) conexión a la base de datos y `crear_bd.py`
-- Nombre 2: (completar) registro con validación
-- Nombre 3: (completar) listado, bucle y decisión del resumen
-- Nombre 4: (completar) formularios, modificar/eliminar y hoja de estilos
+- Herberth Barrera: (completar) conexión a la base de datos y `crear_bd.py`
+- Andrés Romero: (completar) registro con validación
+- Camila Herrera: (completar) listado, bucle y decisión del resumen
+- Héctor Calderón: (completar) formularios, modificar/eliminar y hoja de estilos
