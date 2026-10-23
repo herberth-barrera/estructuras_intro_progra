@@ -1,4 +1,4 @@
-import sqlite3
+import mysql.connector
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, abort
 
@@ -8,22 +8,33 @@ SUCURSALES = ["Escalón", "Santa Elena", "Colonia Médica"]
 
 
 def conectar():
-    conexion = sqlite3.connect("hospital.db")
-    conexion.row_factory = sqlite3.Row
-    conexion.execute("PRAGMA foreign_keys = ON")
-    return conexion
+    # En XAMPP el usuario es root y la contraseña va vacía
+    return mysql.connector.connect(host="localhost", user="root", password="",
+                                   database="hospital_hdd", charset="utf8mb4")
+
+
+@app.errorhandler(mysql.connector.Error)
+def error_mysql(e):
+    return ('<link rel="stylesheet" href="/static/style.css">'
+            "<h1>No se pudo usar la base de datos</h1>"
+            "<p class='error'>Verifica que MySQL esté iniciado en XAMPP y que importaste "
+            "crear_bd.sql en phpMyAdmin.</p>"), 500
 
 
 def obtener_empleados():
-    """Empleados con cuántos documentos entregó y cuántos le corresponden."""
+    """Empleados con cuántos documentos entregó y cuántos le corresponden (JOIN)."""
     conexion = conectar()
-    filas = conexion.execute("""
-        SELECT e.*, COALESCE(SUM(x.entregado), 0) AS entregados, COUNT(x.documento_id) AS total
+    cursor = conexion.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT e.*, CAST(COALESCE(SUM(x.entregado), 0) AS UNSIGNED) AS entregados,
+               COUNT(x.documento_id) AS total
         FROM empleados e
         LEFT JOIN expediente x ON x.empleado_id = e.id
         GROUP BY e.id
         ORDER BY e.id
-    """).fetchall()
+    """)
+    filas = cursor.fetchall()
+    cursor.close()
     conexion.close()
     return filas
 
@@ -33,7 +44,7 @@ def inicio():
     return redirect("/empleados")
 
 
-# Consulta de empleados y sus documentos
+# ---------- CONSULTAR ----------
 @app.route("/empleados")
 def listar():
     filas = obtener_empleados()
@@ -47,7 +58,7 @@ def listar():
     return render_template("empleados.html", empleados=empleados)
 
 
-# Registro de nuevo empleado
+# ---------- REGISTRAR ----------
 @app.route("/empleados/nuevo", methods=["GET", "POST"])
 def nuevo():
     error = ""
@@ -57,7 +68,9 @@ def nuevo():
             datos[campo] = request.form.get(campo, "").strip()
 
         conexion = conectar()
-        repetido = conexion.execute("SELECT id FROM empleados WHERE codigo = ?", (datos["codigo"],)).fetchone()
+        cursor = conexion.cursor(dictionary=True)
+        cursor.execute("SELECT id FROM empleados WHERE codigo = %s", (datos["codigo"],))
+        repetido = cursor.fetchone()
 
         fecha_valida = True
         try:
@@ -74,34 +87,43 @@ def nuevo():
         elif repetido:
             error = "Ya existe un empleado con ese código."
         else:
-            cur = conexion.execute(
-                "INSERT INTO empleados (codigo, nombre, puesto, area, sucursal, fecha_ingreso) VALUES (?, ?, ?, ?, ?, ?)",
-                (datos["codigo"], datos["nombre"], datos["puesto"], datos["area"], datos["sucursal"], datos["fecha_ingreso"]))
-            emp_id = cur.lastrowid
-            for doc in conexion.execute("SELECT id FROM documentos").fetchall():
-                conexion.execute(
-                    "INSERT INTO expediente (empleado_id, documento_id, entregado) VALUES (?, ?, 0)",
+            cursor.execute(
+                "INSERT INTO empleados (codigo, nombre, puesto, area, sucursal, fecha_ingreso) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                (datos["codigo"], datos["nombre"], datos["puesto"], datos["area"],
+                 datos["sucursal"], datos["fecha_ingreso"]))
+            emp_id = cursor.lastrowid
+            cursor.execute("SELECT id FROM documentos")
+            for doc in cursor.fetchall():
+                cursor.execute(
+                    "INSERT INTO expediente (empleado_id, documento_id, entregado) VALUES (%s, %s, 0)",
                     (emp_id, doc["id"]))
             conexion.commit()
+            cursor.close()
             conexion.close()
             return redirect("/empleados")
+        cursor.close()
         conexion.close()
     return render_template("nuevo.html", error=error, datos=datos, sucursales=SUCURSALES)
 
 
-# Modificar información de empleado
+# ---------- MODIFICAR (estado de los documentos del expediente) ----------
 @app.route("/empleados/editar/<int:emp_id>", methods=["GET", "POST"])
 def editar(emp_id):
     conexion = conectar()
-    empleado = conexion.execute("SELECT * FROM empleados WHERE id = ?", (emp_id,)).fetchone()
+    cursor = conexion.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM empleados WHERE id = %s", (emp_id,))
+    empleado = cursor.fetchone()
     if empleado is None:
+        cursor.close()
         conexion.close()
         abort(404)
-    docs = conexion.execute("""
+    cursor.execute("""
         SELECT d.id, d.nombre, x.entregado
         FROM expediente x JOIN documentos d ON d.id = x.documento_id
-        WHERE x.empleado_id = ? ORDER BY d.id
-    """, (emp_id,)).fetchall()
+        WHERE x.empleado_id = %s ORDER BY d.id
+    """, (emp_id,))
+    docs = cursor.fetchall()
 
     error = ""
     if request.method == "POST":
@@ -110,30 +132,36 @@ def editar(emp_id):
         if any(m not in validos for m in marcados):
             error = "Se recibió un documento que no pertenece al expediente."
         else:
-            conexion.execute("UPDATE expediente SET entregado = 0 WHERE empleado_id = ?", (emp_id,))
+            cursor.execute("UPDATE expediente SET entregado = 0 WHERE empleado_id = %s", (emp_id,))
             for m in marcados:
-                conexion.execute(
-                    "UPDATE expediente SET entregado = 1 WHERE empleado_id = ? AND documento_id = ?",
+                cursor.execute(
+                    "UPDATE expediente SET entregado = 1 WHERE empleado_id = %s AND documento_id = %s",
                     (emp_id, int(m)))
             conexion.commit()
+            cursor.close()
             conexion.close()
             return redirect("/empleados")
+    cursor.close()
     conexion.close()
     return render_template("expediente.html", empleado=empleado, docs=docs, error=error)
 
 
-# Eliminar registro de empleado
+# ---------- ELIMINAR ----------
 @app.route("/empleados/eliminar/<int:emp_id>", methods=["POST"])
 def eliminar(emp_id):
     conexion = conectar()
-    conexion.execute("DELETE FROM expediente WHERE empleado_id = ?", (emp_id,))
-    conexion.execute("DELETE FROM empleados WHERE id = ?", (emp_id,))
+    cursor = conexion.cursor()
+    # Primero los hijos y luego el padre: no quedan registros huérfanos
+    # (la llave foránea con ON DELETE CASCADE también lo garantiza)
+    cursor.execute("DELETE FROM expediente WHERE empleado_id = %s", (emp_id,))
+    cursor.execute("DELETE FROM empleados WHERE id = %s", (emp_id,))
     conexion.commit()
+    cursor.close()
     conexion.close()
     return redirect("/empleados")
 
 
-# Resumen de los empleados
+# ---------- RESUMEN (repetición + decisión) ----------
 @app.route("/resumen")
 def resumen():
     filas = obtener_empleados()
