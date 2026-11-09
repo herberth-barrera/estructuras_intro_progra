@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block titulo %}Archivos{% endblock %}
+{% block contenido %}
+<h1>Archivos de {{ empleado.nombre }}</h1>
+<p>{{ empleado.codigo }} · {{ empleado.puesto }} · {{ empleado.sucursal }}</p>
+<a class="boton" href="/empleados/{{ empleado.id }}/archivos/nuevo">Subir documento</a>
+<a class="boton secundario" href="/empleados">Volver</a>
+<table>
+  <tr><th>Documento</th><th>Versión</th><th>Archivo</th><th>Tamaño</th><th>Vence</th><th>Subido</th><th>Estado</th><th>Descarga</th></tr>
+  {% for a in archivos %}
+  <tr class="{{ a.clase }}">
+    <td>{{ a.datos.documento }}</td>
+    <td>v{{ a.datos.version }}</td>
+    <td>{{ a.datos.nombre_original }}</td>
+    <td>{{ (a.datos.tamano / 1024)|round(1) }} KB</td>
+    <td>{{ a.datos.fecha_vencimiento or "-" }}</td>
+    <td>{{ a.datos.fecha_subida }}</td>
+    <td><span class="badge {{ a.clase }}">{{ a.estado }}</span></td>
+    <td><a class="boton" href="/archivos/{{ a.datos.id }}/descargar">Descargar</a></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="8">Este empleado todavía no tiene archivos subidos.</td></tr>
+  {% endfor %}
+</table>
+{% if pendientes %}
+<h2>Documentos sin archivo</h2>
+<ul class="pendientes">
+  {% for p in pendientes %}<li>{{ p.nombre }}</li>{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}
