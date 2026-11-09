@@ -31,3 +31,14 @@ tr.completo td, tr.proceso td, tr.vacio td { background: var(--fondo); color: #0
 .tarjetas { display: flex; gap: 16px; margin: 20px 0; }
 .tarjeta { flex: 1; padding: 18px; border-radius: 10px; background: var(--fondo); border-left: 8px solid var(--color); font-weight: bold; }
 .tarjeta .numero { display: block; font-size: 36px; color: var(--color); }
+
+   /* ===== TAREA 3: archivos, versiones y estados ===== */
+   .vigente  { --color: #2e9e5b; --fondo: #e3f6ea; }
+   .vencido  { --color: #c0392b; --fondo: #fde6e3; }
+   .anterior { --color: #6b7a99; --fondo: #eceff5; }
+   .vencidos { --color: #8e24aa; --fondo: #f3e5f5; }
+   tr.vigente td, tr.vencido td, tr.anterior td, tr.vencidos td { background: var(--fondo); color: #0a1f44; }
+   .ayuda { color: #6b7a99; font-size: 13px; margin-top: 12px; }
+   .pendientes { background: #ffffff; max-width: 520px; padding: 10px 10px 10px 30px; border: 1px solid #e5e9f2; }
+   a.boton { margin-right: 6px; }
+   input[type="file"] { margin-top: 4px; }
